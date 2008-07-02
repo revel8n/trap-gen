@@ -1,4 +1,4 @@
-#summary This page describes some of the rationale, the motivations and the ideas behind TRAP.
+#summary This page describes the rationale, the motivations and the ideas behind TRAP.
 
 = Introduction =
 
