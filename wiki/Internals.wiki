@@ -1,5 +1,5 @@
 #summary Detailed explanation of the internal structure of TRAP source code.
-#labels Phase-Implementation
+#labels Phase-Implementation,Phase-Design
 
 = Introduction =
 
