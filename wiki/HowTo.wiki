@@ -1,9 +1,9 @@
 #summary Brief how-to explaining how it is possible to use TRAP for the generation of a new processor model.
-#labels Featured,Phase-Implementation
+#labels Featured,Phase-Implementation,Phase-Deploy
 
 = Introduction =
 
-Add your content here.
+TRAP (Transactional-level Retargetable Automatic Processor) is a framework for the generation of processor simulators in C++ starting from high level descriptions. The processor description is given directly in Python by calling the APIs of the TRAP library
 
 
 = Details =
