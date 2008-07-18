@@ -3,12 +3,18 @@
 
 = Introduction =
 
-TRAP (Transactional-level Retargetable Automatic Processor) is a framework for the generation of processor simulators in C++ starting from high level descriptions. The processor description is given directly in Python by calling the APIs of the TRAP library
+TRAP (Transactional-level Retargetable Automatic Processor) is a framework for the generation of processor simulators in C++ starting from high level descriptions. The processor description is given directly in Python by calling the APIs of the TRAP library.
+Once the description of the processor is complete, you can create the C++ code implementing the processor by litterally executing the python module (among the ones describing your processor) containing the call to the _write_ API.
+
+The rest of this document presents a short step-by-step How To on how to describe a processor using TRAP and how to create the corresponding C++ code. For a more complete example look at the description of the ARM7TDMI processor contained in folder _processor/ARM7TDMI_.
 
 
 = Details =
 
-Add your content here.  Format your content with:
-  * Text in *bold* or _italic_
-  * Headings, paragraphs, and lists
-  * Automatic links to other wiki pages
+== Describing the Architecture ==
+
+== Describing the instruction coding ==
+
+== Describing the instruction behavior ==
+
+== Creating the Instruction Set Simulator ==
