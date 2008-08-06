@@ -79,6 +79,9 @@ irq = trap.Interrupt('IRQ', priority = 0)
 processor.addIrq(irq)
 processor.setIRQOperation(ARMIsa.IRQOperation)
 }}}
+Adding interrupt ports: a TLM port called _IRQ_ will be created; it has the lowest priority (higher numbers mean higher priorities), meaning that if there are two ports and an interrupt is asserted on both of them, the interrupt coming from the port with higher priority will be serviced first. The _IRQOperation_ is called before the fetch of a new instruction an it contains the code (manually written by the user) to check if an interrupt has occurred and, in case, take the appropriate action. ~~CHECK: I do not like this solution too much, it requires to much knowledge from the user~~
+
+In addition to declaring TLM interrupt ports, we can use the directive `addPin` to a SystemC ports as external processor pins; ~~TODO: we still have to decide how these pins are going to be used; declaring a pinOperation like done for the interrupts?~~
 
 {{{
 fetchStage = trap.PipeStage('fetch')
@@ -88,7 +91,10 @@ processor.addPipeStage(decodeStage)
 executeStage = trap.PipeStage('execute')
 processor.addPipeStage(executeStage)
 }}}
-Description of a simple, three stage pipeline.
+Description of a simple, three stage pipeline. Three methods can be called for each pipeline stage:
+  * `setWriteBack`: defaults to `False`, sets the stage as a write back stage, where intermediate results are committed into the registers. This means that following operation can read from the registers destination of the ISA operation in this stage.
+  * `setBypass`: defaults to `False`, sets the stage as a bypass stage: if an operation _A_ is in this stage, following operations can get intermediate results of _A_ through bypass
+  * `setHazard`: defaults to `False`, specifies that instructions are checked for hazards when entering the stage; in case a hazard exists, the pipeline is stalled. (usually the decode stage is a _hazard_ stage)
 
 {{{
 abi = trap.ABI('REGS[0]', 'REGS[0-3]', 'PC', 'LR', 'SP', 'FP')
@@ -98,6 +104,12 @@ abi.setOffset('REGS[15]', -8)
 processor.setABI(abi)
 }}}
 These instructions declare the conventions for the ABI (_Application Binary Interface_) of the current processor. Such information is used for the implementation of the GDB Stub (in order to be able to debug software running on the created simulator), the Operating System Emulation (in order to be able to execute software without the need to also simulate a fully flagged OS) and the profiler. This data is also necessary in case we want to retarget GCC backend for the architecture being described (this feature is not yet supported).
+
+Instruction `ABI('REGS[0]', 'REGS[0-3]', 'PC', 'LR', 'SP', 'FP')` means that function return values are stored in `REGS[0]`, that registers `REGS[0-3]` are used for parameter passing and that the program counter is contained in register `PC`. The following information are optional: `LR` is the register representing the link register, `SP` the stack pointer and, finally, `FP` the frame pointer.
+
+Directive `addVarRegsCorrespondence` is used to set the correspondence between the architectural elements and the register numbers as seen by GDB for the architecture under description.
+
+At the end, again just for the functional processor, we specify that registers `PC` and `REGS[15]` must be used with an offset of -8.
 
 {{{
 processor.write(folder = 'processor', models = ['funcLT'])
