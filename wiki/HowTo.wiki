@@ -28,7 +28,7 @@ processor.setWordsize(4, 8)
 processor.setISA(ARMIsa.isa)
 }}}
 This means that the processor will be called _ARM7TDMI_ and that the current version is _0.1_. SystemC will not be used for keeping time, so all will be executed in the same delta cycle; this option is valid only for functional descriptions. Note how SystemC will not be used for keeping time, but the structure of the architectural components will anyway be based on this library. At processor construction we also indicate that we are describing a normal processor and not a coprocessor (coprocessor description is not supported by TRAP yet) and finlly we specify that the decoding instruction cache shall be used. Such a cache has nothing to do with the cache of a real processor, it is simply a buffer holding already decoding instructions in order to avoid re-decoding them. The use of the decoding cache consistently speeds up simulation.
-The other two instructions are self-explanatory: we are going to describe a _little endian_ system with _4_ bytes per word, _8_ bits per byte. Finally the class hodling the _Instruction Set Architecture (ISA)_ Description is indicated.
+The other two instructions are self-explanatory: we are going to describe a _little endian_ system with _4_ bytes per word, _8_ bits per byte. Finally the object hodling the _Instruction Set Architecture (ISA)_ Description is indicated.
 
 Now we can start describing the architectural elements:
 {{{
