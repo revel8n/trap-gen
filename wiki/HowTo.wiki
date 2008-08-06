@@ -44,20 +44,19 @@ Here we create a register bank (a group of registers) called _RB_ composed of _3
 {{{
 regs = trap.AliasRegBank('REGS', 16, 'RB[0-15]')
 processor.addAliasRegBank(regs)
-FP = trap.AliasRegister('FP', 'REGS[12]')
-processor.addAliasReg(FP)
+SP = trap.AliasRegister('SP', 'REGS[13]', offset = 0)
+processor.addAliasReg(SP)
 }}}
+These lines create two aliases: one bank and one single. An alias is used (from the point of view of the processor instructions) exactly like a normal register; the different is that, during execution, it can be remapped to point to different registers (or aliases: an alias can also point to another alias). Aliases are useful for handling architectures which expose to the programmer only part of their registers. Consider the ARM7 architecture: when in user mode the frame pointer _SP_ is mapped to register 13; after a switch to supervisor mode, it points to register 15. Aliases can make this transparent to the instruction set implementation: the ISA keeps on accessing alias _SP_ which, depending on the mode, points either to register 13 or 15.
+
+Note how initially the 16 aliases _REGS_ point to registers _0-15_ while _SP_ to the alias _13_ in the alias bank _REGS_ (so if we change what REGS points to, also _SP_ will point to the new target). For individual aliases we can also specify an offset: when accessing the value of the alias we will see the value of the register it points to plus the offset.
 
 {{{
 PC = trap.AliasRegister('PC', 'REGS[15]')
 PC.setDefaultValue(('ENTRY_POINT', 8))
 processor.addAliasReg(PC)
 }}}
-
-{{{
-idMap = trap.MemoryAlias(0xFFFFFFF0, 'MP_ID')
-processor.addMemAlias(idMap)
-}}}
+As for registers, we can set default values also for aliases. In this case we use a special default value: it is the _entry point_ of the software program which will be executed on the simulator; we also set the offset of 8 (this offset is considered just for functional description and it is necessary in order to take into account the fact that in a functional description we do not have the pipeline). Other special values are `PROGRAM LIMIT` (the highest address of the loaded executable code) and `PROGRAM_START` (the lowest address of the loaded executable code).
 
 {{{
 idMap = trap.MemoryAlias(0xFFFFFFF0, 'MP_ID')
