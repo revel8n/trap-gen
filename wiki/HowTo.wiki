@@ -62,14 +62,17 @@ As for registers, we can set default values also for aliases. In this case we us
 idMap = trap.MemoryAlias(0xFFFFFFF0, 'MP_ID')
 processor.addMemAlias(idMap)
 }}}
+Here we have another type of alias: a memory alias. It maps processor registers to memory addresses: by accessing the address we actually access the register.
 
 {{{
 processor.setFetchRegister('PC', -8)
 }}}
+This instruction simply sets the register which holds the address of the next instruction: to fetch an instruction from memory the processor simply reads a word from the address contained in this register. Again it is possible to specify an offset (as before only taken into account for functional processors).
 
 {{{
 processor.setMemory('dataMem', 10*1024*1024)
 }}}
+We set an internal memory for the processor; to access this memory from the ISA implementation we have methods `read_word`, `read_half`, `read_byte`, `write_word`, `write_half`, `write_byte`, `lock` and `unlock`. In addition to (instead of) the internal memory, we can declare TLM ports using the directive `processor.addTLMPort('instrMem', fetch = True)`; `fetch` specifies that this is the TLM port from which instruction are fetch (useful for modeling Harvard architectures). One and only one TLM port can be the fetch port.
 
 {{{
 irq = trap.Interrupt('IRQ', priority = 0)
@@ -85,6 +88,7 @@ processor.addPipeStage(decodeStage)
 executeStage = trap.PipeStage('execute')
 processor.addPipeStage(executeStage)
 }}}
+Description of a simple, three stage pipeline.
 
 {{{
 abi = trap.ABI('REGS[0]', 'REGS[0-3]', 'PC', 'LR', 'SP', 'FP')
@@ -93,10 +97,12 @@ abi.setOffset('PC', -8)
 abi.setOffset('REGS[15]', -8)
 processor.setABI(abi)
 }}}
+These instructions declare the conventions for the ABI (_Application Binary Interface_) of the current processor. Such information is used for the implementation of the GDB Stub (in order to be able to debug software running on the created simulator), the Operating System Emulation (in order to be able to execute software without the need to also simulate a fully flagged OS) and the profiler. This data is also necessary in case we want to retarget GCC backend for the architecture being described (this feature is not yet supported).
 
 {{{
 processor.write(folder = 'processor', models = ['funcLT'])
 }}}
+Finally we create the C++ files implementing our simulator; these files will be put in folder _processor_; we are just creating the functional model using the loosley timed TLM interfaces (in case we specified to used SystemC in the processor description, otherwise time will not be taken into account). Other valid processor variants are _funcAT_ and _accAT_: functional model using Approximate Time TLM interfaces and Cycle Accurate model using using Approximate Time TLM interfaces.
 
 == Describing the instruction coding ==
 
