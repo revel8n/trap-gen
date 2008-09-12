@@ -1,14 +1,19 @@
 #summary This page explains how to install TRAP on your machine
 #labels Featured,Phase-Deploy
 
-= Introduction =
+= Building and Installation Instruction =
 
-Add your content here.
+TRAP uses [http://code.google.com/p/waf _waf_] as build system; from a user point of view it is similar to the usual autotools based project: first there is a configuration step, then the compilation and, finally, the installation.
 
+== Required Libraries and Tools ==
 
-= Details =
+  * BFD: part of the binutils, it is used to read and parse the application software which is going to be executed on the processors.
+  * SystemC: downloadable from www.systemc.org, it is used to manage simulated time and the communication among the hardware modules
+  * TLM 2.0: downloadable from www.systemc.org, it is used to manage connections among the hardware modules. This library is not necessary for the compilation of TRAP itself, but for the compilation of the generated processor models.
+  * Boost: Boost libraries, downloadable from www.boost.org; These libraries are not necessary for the compilation of TRAP itself, but for the compilation of the generated processor models.
 
-Add your content here.  Format your content with:
-  * Text in *bold* or _italic_
-  * Headings, paragraphs, and lists
-  * Automatic links to other wiki pages
+=== Configuration ===
+
+In the base folder of TRAP run the ./waf configure command
+
+== Creation of the processor models ==
