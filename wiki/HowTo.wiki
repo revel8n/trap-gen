@@ -117,6 +117,28 @@ processor.write(folder = 'processor', models = ['funcLT'])
 Finally we create the C++ files implementing our simulator; these files will be put in folder _processor_; we are just creating the functional model using the loosley timed TLM interfaces (in case we specified to used SystemC in the processor description, otherwise time will not be taken into account). Other valid processor variants are _funcAT_ and _accAT_: functional model using Approximate Time TLM interfaces and Cycle Accurate model using using Approximate Time TLM interfaces.
 
 == Describing the instruction coding ==
+The instruction set encoding is described through a series of _machine codes_; they are described as they appear in the architecture reference manual. Each instruction is then assigned a machine code; different instructions can have the same machine code, with the the instruction identification bits set for the particular instruction.
+
+This is an example of the machine code for the _data processing instruction_ with an immediate operand for the ARM7 processor:
+{{{
+dataProc_imm = trap.MachineCode([('cond', 4), ('id', 3), ('opcode', 4), ('s', 1), ('rn', 4), ('rd', 4), ('rotate', 4), ('immediate', 8)])
+dataProc_imm.setVarField('rn', ('REGS', 0))
+dataProc_imm.setVarField('rd', ('REGS', 0))
+dataProc_imm.setBitfield('id', [0, 0, 1])
+}}}
+The _machine code_ (called also instruction format) is composed of various fields: the first 4 bits represent the condition, which, if verified enable instruction execution (remember that the ARM features a predicated instruction set). We then have the identifier of the instruction (_id_) and so on...
+
+After specifying the various fields which compose the instruction format, we have to associate these fields with their type:
+{{{
+dataProc_imm.setVarField('rn', ('REGS', 0))
+}}}
+it says that field _rn_ is the id of a register in the _REGS_ register bank and that, in particular, it refers to register REGS[rn + 0].
+{{{
+dataProc_imm.setBitfield('id', [0, 0, 1])
+}}}
+it specifies that field _id_ is always assigned the bits 001
+
+Note that all the fields called _zero_ are automatically assigned a sequence of 0s, while fields called _one_ are assigned a sequence of 1s.
 
 == Describing the instruction behavior ==
 
