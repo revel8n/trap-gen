@@ -40,4 +40,4 @@ The configuration options which can be passed to the _./ waf configure_ command 
   # --boost-includes=BOOSTINCLUDES specifies the location of the include files of the boost lbraries; it has to be specified in case the libraries are not installed in a standard path.
   # --boost-libs=BOOSTLIBS specifies the location of the library files of the boost lbraries; it has to be specified in case the libraries are not installed in a standard path.
 
-After the configuration successfully ends, compilation can be started with the usual _./waf_ command; the executables files of the processor simulation an of its testing scripts are contained inside the _build_folder.
+After the configuration successfully ends, compilation can be started with the usual _./waf_ command; the executables files of the processor simulation an of its testing scripts are contained inside the `_build_` folder.
