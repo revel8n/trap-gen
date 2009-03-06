@@ -1,5 +1,5 @@
+#summary How-To explaining how it is possible to use TRAP for the generation of a new processor model.
 #labels Featured,Phase-Implementation,Phase-Deploy
-How-To explaining how it is possible to use TRAP for the generation of a new processor model.
 
 = Introduction =
 
