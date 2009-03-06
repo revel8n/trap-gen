@@ -3,32 +3,51 @@
 
 = Introduction =
 
-TRAP (Transactional-level Retargetable Automatic Processor) is a framework for the generation of processor simulators in C++ starting from high level descriptions. The processor description is given directly in Python by calling the APIs of the TRAP library.
-Once the description of the processor is complete, you can create the C++ code implementing the processor by litterally executing the python module (among the ones describing your processor) containing the call to the _write_ API.
+TRAP (Transactional-level Retargetable Automatic Processor) is a framework for the generation of
+processor simulators in C++ starting from high level descriptions. The processor description is given directly
+in Python by calling the APIs of the TRAP library.
+Once the description of the processor is complete, you can create the C++ code implementing the processor by
+litterally executing the python module (among the ones describing your processor) containing the call to the _write_ API.
 
-The rest of this document presents a short step-by-step How To on how to describe a processor using TRAP and how to create the corresponding C++ code. For a more complete example look at the description of the ARM7TDMI processor contained in folder `processor/ARM7TDMI`.
+The rest of this document presents a short step-by-step How To on how to describe a processor using TRAP and
+how to create the corresponding C++ code. For a more complete example look at the description of the ARM7TDMI
+processor contained in folder `processor/ARM7TDMI` or at the description of the LEON3 processor in folder `processor/LEON3` (still work in
+progress). In particular refer to the LEON3 for a more comprehensive overview on how to declare and describe
+moderately complex pipelines.
 
 
 = Details =
 
 == Describing the Architecture ==
-The architecture description consists of the indication of the _registers_, _ports_, _issue width_ of the real processor. Not many information are needed in this section since we target the generation of *high level simulators* (more details would be needed, for example, for the generation of RTL code).
+The architecture description consists of the indication of the _registers_, _ports_, _issue width_ of the real processor.
+Not much information is needed in this section since we target the generation of *high level simulators* (more details
+would be needed, for example, for the generation of RTL code).
 
 The following code snippets are taken from file `processor/ARM7TDMI/ARMArch.py`:
 {{{
 import trap
 }}}
-Lets import the core trap modules; note that if they are not in the standard python search path we can specify their path using the instruction `sys.path.append(_trap_path_)`.
+Lets import the core trap modules; note that if they are not in the standard python search path we can specify
+their path using the instruction `sys.path.append(_trap_path_)`.
 
 We can then procede with the actual creation of the processor:
 {{{
-processor = trap.Processor('ARM7TDMI', version = 0.1, systemc = False, coprocessor = False, instructionCache = True)
+processor = trap.Processor('ARM7TDMI', version = '0.1', systemc = False, instructionCache = True, fastFetch = False)
 processor.setLittleEndian()
 processor.setWordsize(4, 8)
 processor.setISA(ARMIsa.isa)
 }}}
-This means that the processor will be called _ARM7TDMI_ and that the current version is _0.1_. SystemC will not be used for keeping time, so all will be executed in the same delta cycle; this option is valid only for functional descriptions. Note how SystemC will not be used for keeping time, but the structure of the architectural components will anyway be based on this library. At processor construction we also indicate that we are describing a normal processor and not a coprocessor (coprocessor description is not supported by TRAP yet) and finlly we specify that the decoding instruction cache shall be used. Such a cache has nothing to do with the cache of a real processor, it is simply a buffer holding already decoding instructions in order to avoid re-decoding them. The use of the decoding cache consistently speeds up simulation.
-The other two instructions are self-explanatory: we are going to describe a _little endian_ system with _4_ bytes per word, _8_ bits per byte. Finally the object hodling the _Instruction Set Architecture (ISA)_ Description is indicated.
+This means that the processor will be called _ARM7TDMI_ and that the current version is _0.1_. SystemC will not be used for
+keeping time, so all will be executed in the same delta cycle; this option is valid only for functional descriptions and it cannot
+be used if TLM ports are employed for communication with external IPs.
+Note how SystemC will not be used for keeping time, but the structure of the architectural components will anyway be based on
+this library. At processor construction we also indicate that the decoding instruction cache shall be used. Such a cache has nothing to do with
+the cache of a real processor, it is simply a buffer holding already decoding instructions in order to avoid re-decoding them.
+The use of the decoding cache consistently speeds up simulation. We also specify that the fastFetch option is not going to be used; with such
+option we read from memory an instruction only the first time it is encountered: this speeds up simulation, but it has two drawbacks:
+statistics regading access to memory are not correctly computed and self-modifying code cannot be simulated.
+The other two instructions are self-explanatory: we are going to describe a _little endian_ system with _4_ bytes per word, _8_ bits per byte.
+Finally the object hodling the _Instruction Set Architecture (ISA)_ Description is indicated.
 
 Now we can start describing the architectural elements:
 {{{
@@ -39,7 +58,27 @@ cpsr = trap.Register('CPSR', 32, cpsrBitMask)
 cpsr.setDefaultValue(0x000000D3)
 processor.addRegister(cpsr)
 }}}
-Here we create a register bank (a group of registers) called _RB_ composed of _30_ registers each one _32_ bit wide. Next a single register called _CPSR_ is created: it is _32_ bit wide. Note how a mask (_cpsrBitMask_) is defined: this mask easies the access to the individual registers bits: from the ISA implementation code (see below) we can simply write `CPSR["mode"]` to access the first four bits of the regsiter. We also set a default value, which is the value that register CPSR have at processor reset; As shown below it is possible to also specify special keywords as default values.
+Here we create a register bank (a group of registers) called _RB_ composed of _30_ registers each one _32_ bit wide.
+Next a single register called _CPSR_ is created: it is _32_ bit wide. Note how a mask (_cpsrBitMask_) is defined: this mask easies
+the access to the individual registers bits: from the ISA implementation code (see below) we can simply write `CPSR[key_mode]` to access
+the first four bits of the regsiter (masks can be defined both for simple registers and register banks). We also set a default value,
+which is the value that register CPSR have at processor reset; As shown
+below it is possible to also specify special keywords as default values.
+Other interesting register declarations, this time taken from the LEON3 processor are:
+{{{
+globalRegs = trap.RegisterBank('GLOBAL', 8, 32)
+globalRegs.setConst(0, 0)
+}}}
+We declare a register bank of 8 registers, each one 32 bits wide and we specify that register 0 (the first argument) will
+be constant to value 0 (the second argument): any write operation on this register will have no effect and any read
+operation will always read 0. Method `setConst` also exists for simple registers.
+{{{
+yReg = trap.Register('Y', 32)
+yReg.setDelay(3)
+}}}
+With this code we specify that in the functional model writes to this registers will be visible with a latency of 3 instructions:
+this can be used to model the fact that, with long pipelines, writes to register happen at the end of
+the pipeline while reads at the beginning. Method `setConst` also exists for register banks.
 
 {{{
 regs = trap.AliasRegBank('REGS', 16, 'RB[0-15]')
@@ -47,16 +86,26 @@ processor.addAliasRegBank(regs)
 SP = trap.AliasRegister('SP', 'REGS[13]', offset = 0)
 processor.addAliasReg(SP)
 }}}
-These lines create two aliases: one bank and one single. An alias is used (from the point of view of the processor instructions) exactly like a normal register; the different is that, during execution, it can be remapped to point to different registers (or aliases: an alias can also point to another alias). Aliases are useful for handling architectures which expose to the programmer only part of their registers. Consider the ARM7 architecture: when in user mode the frame pointer _SP_ is mapped to register 13; after a switch to supervisor mode, it points to register 15. Aliases can make this transparent to the instruction set implementation: the ISA keeps on accessing alias _SP_ which, depending on the mode, points either to register 13 or 15.
+These lines create two aliases: one bank and one single. An alias is used (from the point of view of the processor instructions) exactly
+like a normal register; the different is that, during execution, it can be remapped to point to different registers (or aliases: an alias
+can also point to another alias). Aliases are useful for handling architectures which expose to the programmer only part of their registers.
+Consider the ARM7 architecture: when in user mode the frame pointer _SP_ is mapped to register 13; after a switch to supervisor mode, it points
+to register 15. Aliases can make this transparent to the instruction set implementation: the ISA keeps on accessing alias _SP_ which, depending
+on the mode, points either to register 13 or 15.
 
-Note how initially the 16 aliases _REGS_ point to registers _0-15_ while _SP_ to the alias _13_ in the alias bank _REGS_ (so if we change what REGS points to, also _SP_ will point to the new target). For individual aliases we can also specify an offset: when accessing the value of the alias we will see the value of the register it points to plus the offset.
+Note how initially the 16 aliases _REGS_ point to registers _0-15_ while _SP_ to the alias _13_ in the alias bank _REGS_ (so if we change what
+REGS points to, also _SP_ will point to the new target). For individual aliases we can also specify an offset: when accessing the value of the alias
+we will see the value of the register it points to plus the offset.
 
 {{{
 PC = trap.AliasRegister('PC', 'REGS[15]')
 PC.setDefaultValue(('ENTRY_POINT', 8))
 processor.addAliasReg(PC)
 }}}
-As for registers, we can set default values also for aliases. In this case we use a special default value: it is the _entry point_ of the software program which will be executed on the simulator; we also set the offset of 8 (this offset is considered just for functional description and it is necessary in order to take into account the fact that in a functional description we do not have the pipeline). Other special values are `PROGRAM LIMIT` (the highest address of the loaded executable code) and `PROGRAM_START` (the lowest address of the loaded executable code).
+As for registers, we can set default values also for aliases. In this case we use a special default value: it is the _entry point_ of the software
+program which will be executed on the simulator; we also set the offset of 8 (this offset is considered just for functional description and it is
+necessary in order to take into account the fact that in a functional description we do not have the pipeline). Other special values are `PROGRAM LIMIT`
+(the highest address of the loaded executable code) and `PROGRAM_START` (the lowest address of the loaded executable code).
 
 {{{
 idMap = trap.MemoryAlias(0xFFFFFFF0, 'MP_ID')
@@ -67,21 +116,30 @@ Here we have another type of alias: a memory alias. It maps processor registers 
 {{{
 processor.setFetchRegister('PC', -8)
 }}}
-This instruction simply sets the register which holds the address of the next instruction: to fetch an instruction from memory the processor simply reads a word from the address contained in this register. Again it is possible to specify an offset (as before only taken into account for functional processors).
+This instruction simply sets the register which holds the address of the next instruction: to fetch an instruction from memory the processor simply
+reads a word from the address contained in this register. Again it is possible to specify an offset (as before only taken into account for functional
+processors).
 
 {{{
 processor.setMemory('dataMem', 10*1024*1024)
 }}}
-We set an internal memory for the processor; to access this memory from the ISA implementation we have methods `read_word`, `read_half`, `read_byte`, `write_word`, `write_half`, `write_byte`, `lock` and `unlock`. In addition to (instead of) the internal memory, we can declare TLM ports using the directive `processor.addTLMPort('instrMem', fetch = True)`; `fetch` specifies that this is the TLM port from which instruction are fetch (useful for modeling Harvard architectures). One and only one TLM port can be the fetch port.
+We set an internal memory for the processor; to access this memory from the ISA implementation we have methods `read_word`, `read_half`, `read_byte`,
+`write_word`, `write_half`, `write_byte`, `lock` and `unlock`. In addition to (instead of) the internal memory, we can declare TLM ports using the directive
+`processor.addTLMPort('instrMem', fetch = True)`; `fetch` specifies that this is the TLM port from which instruction are fetch (useful for modeling Harvard
+architectures). One and only one TLM port can be the fetch port.
 
 {{{
 irq = trap.Interrupt('IRQ', priority = 0)
 processor.addIrq(irq)
 processor.setIRQOperation(ARMIsa.IRQOperation)
 }}}
-Adding interrupt ports: a TLM port called _IRQ_ will be created; it has the lowest priority (higher numbers mean higher priorities), meaning that if there are two ports and an interrupt is asserted on both of them, the interrupt coming from the port with higher priority will be serviced first. The _IRQOperation_ is called before the fetch of a new instruction an it contains the code (manually written by the user) to check if an interrupt has occurred and, in case, take the appropriate action. ~~CHECK: I do not like this solution too much, it requires to much knowledge from the user~~
+Adding interrupt ports: a TLM port called _IRQ_ will be created; it has the lowest priority (higher numbers mean higher priorities), meaning that if
+there are two ports and an interrupt is asserted on both of them, the interrupt coming from the port with higher priority will be serviced first. The
+_IRQOperation_ is called before the fetch of a new instruction an it contains the code (manually written by the user) to check if an interrupt has occurred
+and, in case, take the appropriate action. ~~CHECK: I do not like this solution too much, it requires to much knowledge from the user~~
 
-In addition to declaring TLM interrupt ports, we can use the directive `addPin` to a SystemC ports as external processor pins; ~~TODO: we still have to decide how these pins are going to be used; declaring a pinOperation like done for the interrupts?~~
+In addition to declaring TLM interrupt ports, we can use the directive `addPin` to a SystemC ports as external processor pins; ~~TODO: we still have
+to decide how these pins are going to be used; declaring a pinOperation like done for the interrupts?~~
 
 {{{
 fetchStage = trap.PipeStage('fetch')
@@ -92,9 +150,12 @@ executeStage = trap.PipeStage('execute')
 processor.addPipeStage(executeStage)
 }}}
 Description of a simple, three stage pipeline. Three methods can be called for each pipeline stage:
-  * `setWriteBack`: defaults to `False`, sets the stage as a write back stage, where intermediate results are committed into the registers. This means that following operation can read from the registers destination of the ISA operation in this stage.
-  * `setBypass`: defaults to `False`, sets the stage as a bypass stage: if an operation _A_ is in this stage, following operations can get intermediate results of _A_ through bypass
-  * `setHazard`: defaults to `False`, specifies that instructions are checked for hazards when entering the stage; in case a hazard exists, the pipeline is stalled. (usually the decode stage is a _hazard_ stage)
+  * `setWriteBack`: defaults to `False`, sets the stage as a write back stage, where intermediate results are committed into the registers.
+This means that following operation can read from the registers destination of the ISA operation in this stage.
+  * `setBypass`: defaults to `False`, sets the stage as a bypass stage: if an operation _A_ is in this stage, following operations can get
+intermediate results of _A_ through bypass
+  * `setHazard`: defaults to `False`, specifies that instructions are checked for hazards when entering the stage; in case a hazard exists,
+the pipeline is stalled. (usually the decode stage is a _hazard_ stage)
 
 {{{
 abi = trap.ABI('REGS[0]', 'REGS[0-3]', 'PC', 'LR', 'SP', 'FP')
@@ -103,21 +164,32 @@ abi.setOffset('PC', -8)
 abi.setOffset('REGS[15]', -8)
 processor.setABI(abi)
 }}}
-These instructions declare the conventions for the ABI (_Application Binary Interface_) of the current processor. Such information is used for the implementation of the GDB Stub (in order to be able to debug software running on the created simulator), the Operating System Emulation (in order to be able to execute software without the need to also simulate a fully flagged OS) and the profiler. This data is also necessary in case we want to retarget GCC backend for the architecture being described (this feature is not yet supported).
+These instructions declare the conventions for the ABI (_Application Binary Interface_) of the current processor. Such information is used
+for the implementation of the GDB Stub (in order to be able to debug software running on the created simulator), the Operating System Emulation
+(in order to be able to execute software without the need to also simulate a fully flagged OS) and the profiler. This data is also necessary in case
+we want to retarget GCC backend for the architecture being described (this feature is not yet supported).
 
-Instruction `ABI('REGS[0]', 'REGS[0-3]', 'PC', 'LR', 'SP', 'FP')` means that function return values are stored in `REGS[0]`, that registers `REGS[0-3]` are used for parameter passing and that the program counter is contained in register `PC`. The following information are optional: `LR` is the register representing the link register, `SP` the stack pointer and, finally, `FP` the frame pointer.
+Instruction `ABI('REGS[0]', 'REGS[0-3]', 'PC', 'LR', 'SP', 'FP')` means that function return values are stored in `REGS[0]`, that registers `REGS[0-3]`
+are used for parameter passing and that the program counter is contained in register `PC`. The following information are optional: `LR` is the register
+representing the link register, `SP` the stack pointer and, finally, `FP` the frame pointer.
 
-Directive `addVarRegsCorrespondence` is used to set the correspondence between the architectural elements and the register numbers as seen by GDB for the architecture under description.
+Directive `addVarRegsCorrespondence` is used to set the correspondence between the architectural elements and the register numbers as seen by GDB
+for the architecture under description.
 
 At the end, again just for the functional processor, we specify that registers `PC` and `REGS[15]` must be used with an offset of -8.
 
 {{{
 processor.write(folder = 'processor', models = ['funcLT'])
 }}}
-Finally we create the C++ files implementing our simulator; these files will be put in folder _processor_; we are just creating the functional model using the loosley timed TLM interfaces (in case we specified to used SystemC in the processor description, otherwise time will not be taken into account). Other valid processor variants are _funcAT_ and _accAT_: functional model using Approximate Time TLM interfaces and Cycle Accurate model using using Approximate Time TLM interfaces.
+Finally we create the C++ files implementing our simulator; these files will be put in folder _processor_; we are just creating the functional
+model using the loosley timed TLM interfaces (in case we specified to used SystemC in the processor description, otherwise time will not be
+taken into account). Other valid processor variants are _funcAT_ and _accAT_: functional model using Approximate Time TLM interfaces and
+Cycle Accurate model using using Approximate Time TLM interfaces.
 
 == Describing the instruction coding ==
-The instruction set encoding is described through a series of _machine codes_; they are described as they appear in the architecture reference manual. Each instruction is then assigned a machine code; different instructions can have the same machine code, with the the instruction identification bits set for the particular instruction.
+The instruction set encoding is described through a series of _machine codes_; they are described as they appear in the architecture reference
+manual. Each instruction is then assigned a machine code; different instructions can have the same machine code, with the the instruction
+identification bits set for the particular instruction.
 
 This is an example of the machine code for the _data processing instruction_ with an immediate operand for the ARM7 processor:
 {{{
@@ -126,7 +198,9 @@ dataProc_imm.setVarField('rn', ('REGS', 0))
 dataProc_imm.setVarField('rd', ('REGS', 0))
 dataProc_imm.setBitfield('id', [0, 0, 1])
 }}}
-The _machine code_ (called also instruction format) is composed of various fields: the first 4 bits represent the condition, which, if verified enable instruction execution (remember that the ARM features a predicated instruction set). We then have the identifier of the instruction (_id_) and so on...
+The _machine code_ (called also instruction format) is composed of various fields: the first 4 bits represent the condition, which, if
+verified enable instruction execution (remember that the ARM features a predicated instruction set). We then have the identifier of the
+instruction (_id_) and so on...
 
 After specifying the various fields which compose the instruction format, we have to associate these fields with their type:
 {{{
