@@ -21,8 +21,8 @@ In the base folder of TRAP run the _./waf configure_ command. Several configurat
   # _--prefix=LIB_DEST_FOLDER_ specifies the destination folder for installation of the TRAP C++ runtime libraries. If this option is not specified _/usr/local_ is used as default
   # _--py-install-dir=PYTHON_DEST_FOLDER_ specifies the destination folder for the installation of TRAP python files. If this option is not specified, _/usr/lib/pythonX.X/site-packages/_ is used as default
   # _--with-bfd=BFD_FOLDER_ specifies the location of the BFD library; if this option is not specified TRAP will look for libbfd in the standard library search path. Specifying this option is mandatory under Microsoft Windows.
-  # --boost-includes=BOOSTINCLUDES specifies the location of the include files of the boost lbraries; it has to be specified in case the libraries are not installed in a standard path.
-  # --boost-libs=BOOSTLIBS specifies the location of the library files of the boost lbraries; it has to be specified in case the libraries are not installed in a standard path.
+  # _--boost-includes=BOOSTINCLUDES_ specifies the location of the include files of the boost lbraries; it has to be specified in case the libraries are not installed in a standard path.
+  # _--boost-libs=BOOSTLIBS_ specifies the location of the library files of the boost lbraries; it has to be specified in case the libraries are not installed in a standard path.
 
 To have the list of all the possible configuration options run _./waf --help_
 
@@ -42,8 +42,8 @@ The configuration options which can be passed to the _./ waf configure_ command 
   # _--with-systemc=SYSC_FOLDER_ specifies the location of the SystemC 2.2 library. It is compulsory to specify such option
   # --with-tlm=TLM_FOLDER specifies the location of the TLM 2.0 library. It is compulsory to specify such option
   # --with-trap=TRAP_FOLDER specifies the location of the TRAP runtime libraries and headers. It must be specified if TRAP was installed in a custom folder
-  # --boost-includes=BOOSTINCLUDES specifies the location of the include files of the boost lbraries; it has to be specified in case the libraries are not installed in a standard path.
-  # --boost-libs=BOOSTLIBS specifies the location of the library files of the boost lbraries; it has to be specified in case the libraries are not installed in a standard path.
+  # _--boost-includes=BOOSTINCLUDES_ specifies the location of the include files of the boost lbraries; it has to be specified in case the libraries are not installed in a standard path.
+  # _--boost-libs=BOOSTLIBS_ specifies the location of the library files of the boost lbraries; it has to be specified in case the libraries are not installed in a standard path.
   # _--with-bfd=BFD_FOLDER_ specifies the location of the BFD library; if this option is not specified TRAP will look for libbfd in the standard library search path. Specifying this option is mandatory under Microsoft Windows.
   # _--static_ specifies that a fully static executable have to be built. Such executable can be redistributed standalone and it does not depend on any library.
 
