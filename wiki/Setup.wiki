@@ -3,7 +3,7 @@
 
 = Building and Installation Instruction =
 
-TRAP uses [http://code.google.com/p/waf waf] as build system; from a user point of view it is similar to the usual autotools
+TRAP uses waf ([http://code.google.com/p/waf]) as build system; from a user point of view it is similar to the usual autotools
 based project: first there is a configuration step, then the compilation and, finally, the installation.
 
 == Required Libraries and Tools ==

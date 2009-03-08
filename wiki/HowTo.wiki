@@ -114,7 +114,7 @@ processor.addMemAlias(idMap)
 Here we have another type of alias: a memory alias. It maps processor registers to memory addresses: by accessing the address we actually access the register.
 
 {{{
-processor.setFetchRegister('PC', -8)
+processor.setFetchRegister('PC', -4)
 }}}
 This instruction simply sets the register which holds the address of the next instruction: to fetch an instruction from memory the processor simply
 reads a word from the address contained in this register. Again it is possible to specify an offset (as before only taken into account for functional
@@ -125,8 +125,8 @@ processor.setMemory('dataMem', 10*1024*1024)
 }}}
 We set an internal memory for the processor; to access this memory from the ISA implementation we have methods `read_word`, `read_half`, `read_byte`,
 `write_word`, `write_half`, `write_byte`, `lock` and `unlock`. In addition to (instead of) the internal memory, we can declare TLM ports using the directive
-`processor.addTLMPort('instrMem', fetch = True)`; `fetch` specifies that this is the TLM port from which instruction are fetch (useful for modeling Harvard
-architectures). One and only one TLM port can be the fetch port.
+`processor.addTLMPort('instrMem', fetch = True)`; `fetch` specifies that this is the TLM port from which instruction are fetched (useful for modeling Harvard
+architectures, with separate instruction and data ports for communicating with memory). One and only one TLM port can be the fetch port.
 
 {{{
 irq = trap.Interrupt('IRQ', priority = 0)
@@ -138,30 +138,63 @@ there are two ports and an interrupt is asserted on both of them, the interrupt 
 _IRQOperation_ is called before the fetch of a new instruction an it contains the code (manually written by the user) to check if an interrupt has occurred
 and, in case, take the appropriate action. ~~CHECK: I do not like this solution too much, it requires to much knowledge from the user~~
 
-In addition to declaring TLM interrupt ports, we can use the directive `addPin` to a SystemC ports as external processor pins; ~~TODO: we still have
-to decide how these pins are going to be used; declaring a pinOperation like done for the interrupts?~~
+In addition to declaring TLM interrupt ports, we can use the directive `addPin` to a SystemC ports as external processor pins;
+~~TODO: we still have to decide how these pins are going to be used; declaring a pinOperation like done for the interrupts?~~
 
 {{{
 fetchStage = trap.PipeStage('fetch')
 processor.addPipeStage(fetchStage)
 decodeStage = trap.PipeStage('decode')
 processor.addPipeStage(decodeStage)
+regsStage = trap.PipeStage('regs')
+regsStage.setHazard()
+regsStage.setCheckUnknownInstr()
+processor.addPipeStage(regsStage)
 executeStage = trap.PipeStage('execute')
+executeStage.setCheckTools()
 processor.addPipeStage(executeStage)
+memoryStage = trap.PipeStage('memory')
+processor.addPipeStage(memoryStage)
+exceptionStage = trap.PipeStage('exception')
+processor.addPipeStage(exceptionStage)
+wbStage = trap.PipeStage('wb')
+wbStage.setWriteBack()
+wbStage.setEndHazard()
+processor.addPipeStage(wbStage)
 }}}
-Description of a simple, three stage pipeline. Three methods can be called for each pipeline stage:
-  * `setWriteBack`: defaults to `False`, sets the stage as a write back stage, where intermediate results are committed into the registers.
+Description of a seven stage pipeline. Some methods can be called to specify the behavior each pipeline stage:
+  * `setWriteBack`: defaults to `False`, sets the stage as a write back stage, where intermediate results
+are committed into the registers.
 This means that following operation can read from the registers destination of the ISA operation in this stage.
-  * `setBypass`: defaults to `False`, sets the stage as a bypass stage: if an operation _A_ is in this stage, following operations can get
-intermediate results of _A_ through bypass
-  * `setHazard`: defaults to `False`, specifies that instructions are checked for hazards when entering the stage; in case a hazard exists,
-the pipeline is stalled. (usually the decode stage is a _hazard_ stage)
+  * `setCheckUnknownInstr`: defaults to `False`, instructs the stage to raise an exception in case an
+unknown instruction reaches this stage (i.e. in case in case an opcode not corresponding to  any declared
+instruction reaches this stage)
+  * `setCheckTools`: defaults to `False`, instructs the simulator to call the processor tools (debuggeer,
+profiler, OS emulator, etc.) in this stage.
+  * `setHazard`: defaults to `False`, specifies that instructions are checked for hazards when entering the stage; in case a
+hazard exists, the pipeline is stalled. (usually the decode stage is a _hazard_ stage). Usually this method
+is called for the stage were the register file is written.
+  * `setEndHazard`: defaults to `False`, specifies that registers locked in the stage marked as `setHazard`
+because the current instruction was writing them, are unlock and, as such, if a following instruction
+tries to read/write them, no hazard is generated.
+
+Finally it is possible to specify the order with which registers are written back to the main register file
+after each clock cycle:
+{{{
+processor.setWBOrder('NPC', ('decode', 'execute', 'wb'))
+processor.setWBOrder('PC', ('decode', 'fetch', 'execute', 'wb'))
+}}}
+The first line instructs the simulator to first check if NPC was modified in the _decode_ stage: in this case the value
+of NPC after _decode_ is written back to the main register file; if there were no modifications, we check the
+_execute_ stage and then the _wb_ stage. The remaining stages are checked in the order they were declared.
+For the registers for which no `setWBOrder` method was called, we first check the stage marked with the _setWriteBack_
+method and the the remaining stages in the order they were declared.
 
 {{{
 abi = trap.ABI('REGS[0]', 'REGS[0-3]', 'PC', 'LR', 'SP', 'FP')
 abi.addVarRegsCorrespondence({'REGS[0-15]': (0, 15), 'CPSR': (25, 25)})
-abi.setOffset('PC', -8)
-abi.setOffset('REGS[15]', -8)
+abi.setOffset('PC', -4)
+abi.setOffset('REGS[15]', -4)
 processor.setABI(abi)
 }}}
 These instructions declare the conventions for the ABI (_Application Binary Interface_) of the current processor. Such information is used
@@ -183,8 +216,12 @@ processor.write(folder = 'processor', models = ['funcLT'])
 }}}
 Finally we create the C++ files implementing our simulator; these files will be put in folder _processor_; we are just creating the functional
 model using the loosley timed TLM interfaces (in case we specified to used SystemC in the processor description, otherwise time will not be
-taken into account). Other valid processor variants are _funcAT_ and _accAT_: functional model using Approximate Time TLM interfaces and
+taken into account). The valid processor variants are _funcAT_ and _accAT_: functional model using Approximate Time TLM interfaces and
 Cycle Accurate model using using Approximate Time TLM interfaces.
+The write method has two other optional parameters:
+  * `trace = True`: the processor model will be generated with tracing enabled; at each clock cycle the instruction being executed
+and the status of the processor after instruction execution will be printed.
+  * `dumpDecoderName = FILENAME`: the tree representing the decoder will be printed to _FILENAME_ in the _.dot_ format.
 
 == Describing the instruction coding ==
 The instruction set encoding is described through a series of _machine codes_; they are described as they appear in the architecture reference
@@ -194,8 +231,8 @@ identification bits set for the particular instruction.
 This is an example of the machine code for the _data processing instruction_ with an immediate operand for the ARM7 processor:
 {{{
 dataProc_imm = trap.MachineCode([('cond', 4), ('id', 3), ('opcode', 4), ('s', 1), ('rn', 4), ('rd', 4), ('rotate', 4), ('immediate', 8)])
-dataProc_imm.setVarField('rn', ('REGS', 0))
-dataProc_imm.setVarField('rd', ('REGS', 0))
+dataProc_imm.setVarField('rn', ('REGS', 0), 'in')
+dataProc_imm.setVarField('rd', ('REGS', 0), 'out')
 dataProc_imm.setBitfield('id', [0, 0, 1])
 }}}
 The _machine code_ (called also instruction format) is composed of various fields: the first 4 bits represent the condition, which, if
@@ -204,9 +241,13 @@ instruction (_id_) and so on...
 
 After specifying the various fields which compose the instruction format, we have to associate these fields with their type:
 {{{
-dataProc_imm.setVarField('rn', ('REGS', 0))
+dataProc_imm.setVarField('rn', ('REGS', 0), 'in')
 }}}
-it says that field _rn_ is the id of a register in the _REGS_ register bank and that, in particular, it refers to register REGS[rn + 0].
+it says that field _rn_ is the id of a register in the _REGS_ register bank and that, in particular, it refers to register REGS[rn + 0];
+it also specifies that this is an input register, in the sense that it will be read, but not written,
+by the instructions using this machine code.
+Other valid values are `'out'` and `'inout'`, to specify respectively that the register is only written or both read and written
+by the instructions using this machine code
 {{{
 dataProc_imm.setBitfield('id', [0, 0, 1])
 }}}
@@ -215,5 +256,128 @@ it specifies that field _id_ is always assigned the bits 001
 Note that all the fields called _zero_ are automatically assigned a sequence of 0s, while fields called _one_ are assigned a sequence of 1s.
 
 == Describing the instruction behavior ==
+This Section explains how we can combine all the details described so far in order to describe the
+actual Instruction Set together with its behavior in each pipeline stage. As an example we will use the _AND_
+instruction of the LEON3 processor:
+{{{
+opCodeReadRegs1 = cxx_writer.writer_code.Code("""
+rs1_op = rs1;
+""")
+opCodeExecImm = cxx_writer.writer_code.Code("""
+result = rs1_op & SignExtend(simm13, 13);
+""")
+opCodeWb = cxx_writer.writer_code.Code("""
+rd = result;
+""")
+and_imm_Instr = trap.Instruction('AND_imm', True, frequency = 5)
+and_imm_Instr.setMachineCode(dpi_format2, {'op3': [0, 0, 0, 0, 0, 1]}, ('and r', '%rs1', ' ', '%simm13', ' r', '%rd'))
+and_imm_Instr.setCode(opCodeExecImm, 'execute')
+and_imm_Instr.setCode(opCodeReadRegs1, 'regs')
+and_imm_Instr.setCode(opCodeWb, 'wb')
+and_imm_Instr.addBehavior(IncrementPC, 'fetch')
+and_imm_Instr.addVariable(('result', 'BIT<32>'))
+and_imm_Instr.addVariable(('rs1_op', 'BIT<32>'))
+and_imm_Instr.addTest({'rd': 0, 'rs1': 10, 'simm13': 0xfff}, {'REGS[10]' : 0xffffffff, 'PC' : 0x0, 'NPC' : 0x4}, {'REGS[10]' : 0xffffffff, 'REGS[0]' : 0, 'PC' : 0x8, 'NPC' : 0x8})
+isa.addInstruction(and_imm_Instr)
+}}}
+First of all, in the `opCodeReadRegs1`, `opCodeExecImm`, and `opCodeWb` operations we define the C++ implementing the
+behavior of the AND instruction respectively in the _regs_, _execute_, and _wb_ stages. In this code it is possible
+to write normal C++ code, including declaration of new variables, etc. We have access to all the registers,
+aliases, and memories previously declared in the architecture of the processor. Moreover we can access the different
+bit of the instruction coding as specified in the instruction format (in this case `dpi_format2`). For example,
+`dpi_format2` is defined as:
+{{{
+dpi_format2 = trap.MachineCode([('op', 2), ('rd', 5), ('op3', 6), ('rs1', 5), ('one', 1), ('simm13', 13)])
+dpi_format2.setBitfield('op', [1, 0])
+dpi_format2.setVarField('rd', ('REGS', 0), 'out')
+dpi_format2.setVarField('rs1', ('REGS', 0), 'in')
+}}}
+In this case we can access `op`, `op3`, and `simm13` as integer variables; regarding the parts of the instruction
+coding which reference archietctural elements (`rd` and `rs1`), two variables are created: `rd_bit` and `rs1_bit` which
+contain the value of the `rd` and `rs1` fields, while variables `rd` and `rs1` are registers aliases directly pointing,
+respectively, to `REGS[rd_bit + 0]` and `REGS[rs1_bit + 0]`. In addition we can access all the variables declared
+using the `addVariable` directive; note how these variables retain their value throughout the pipeline stages of the
+instruction being declared.
+
+Concerning the `Instruction` constructor, the first parameter is the instruction name, the second specifies whether the
+instruction can modify or not the program counter ~~TODO: this information is not used yet~~ and the `frequency`
+parameters specify how often this instruction is found in normal programs; this information is used in the construction
+of the decoder: the higher the `frequency` parameter, the faster will be the decoder in decoding this instruction.
+
+The `setMachineCode` construct takes three parameters:
+  # the first one specifies what is the machine code of this instruction
+  # the second what are the bits, in the machine code, that uniquely identify this instruction
+  # the third one is used to build the disassembler: the different parts of the assembly code representing this
+instruction are the different elements of the list, elements staring with _%_ refer to the parts of the
+instruction encoding and are substituted with the value of the corresponding part in the actualy bistring.
+It is also possible to give more complex directive to the disassembler:
+{{{
+('b', ('%cond', {int('1000', 2) : 'a',and_imm_Instr.addTest({'rd': 0, 'rs1': 10, 'simm13': 0xfff}, {'REGS[10]' : 0xffffffff, 'PC' : 0x0, 'NPC' : 0x4}, {'REGS[10]' : 0xffffffff, 'REGS[0]' : 0, 'PC' : 0x8, 'NPC' : 0x8})
+
+int('0000', 2) : 'n', int('1001', 2) : 'ne', int('0001', 2) : 'e', int('1010', 2) : 'g', int('0010', 2) : 'le',
+int('1011', 2) : 'ge', int('0011', 2) : 'l', int('1100', 2) : 'gu', int('0100', 2) : 'leu', int('1101', 2) : 'cc',
+int('01010', 2) : 'cs', int('1110', 2) : 'pos', int('0110', 2) : 'neg', int('1111', 2) : 'vc', int('0111', 2) : 'vs',}),
+('%a', {1: ',a'}), ' ', '%disp22'))
+}}}
+Here (taken from the specification of the _branch_ instruction of the LEON3 processor) we specify that
+after the litteral `b` we have to write `a` if the `cond` field has the binary value `1000`, `n` if if has
+value `0000`, etc.
+
+Finally we describe the tests for testing the correctness of the instruction implementation; note that it is possible to
+add an unlimited number of tests for each instruction (the more the better) and that the tests are automatically generated
+only when creating a functional simulator without SystemC.
+The code for a test is divided into three parts:
+{{{
+and_imm_Instr.addTest({'rd': 0, 'rs1': 10, 'simm13': 0xfff}, {'REGS[10]' : 0xffffffff, 'PC' : 0x0, 'NPC' : 0x4}, {'REGS[10]' : 0xffffffff, 'REGS[0]' : 0, 'PC' : 0x8, 'NPC' : 0x8})
+}}}
+The first one specifies the values of the machine code with which we want to exercise the instruction,
+the second one the state of the processor before the execution of the instruction and the third one the desired
+state of the processor after the execution of the instruction.
+
+One final note: the `addBehavior` construct has three additional parameters:
+  # `pre = True` specifies whether the behavior has to be added before or after the instruction code for the specified
+pipeline stage
+  # `accurateModel = True` specifies that this behavior has to be added when a cycle accurate model is being created
+  # `functionalModel = True` specifies that this behavior has to be added when a functional model is being created
+
+Behavior `IncrementPC` is declared as a helper method: since this method is used by many instructions,
+its behavior is factored in a separate routine. Such routine could be decalred inside the ISA file or,
+in order to keep things clearer, in a separate python file (in the LEON3 description it is declared
+inside file _LEON3Mehotds.py_):
+{{{
+opCode = cxx_writer.writer_code.Code("""PC = NPC;
+NPC += 4;
+""")
+IncrementPC = trap.HelperOperation('IncrementPC', opCode)
+}}}
+
+In addition to the _HelperOperation_ construct there are available for easing the description of the ISA behavior are
+_HelperMethod_:
+{{{
+opCode = cxx_writer.writer_code.Code("""
+if((bitSeq & (1 << (bitSeq_length - 1))) != 0)
+    bitSeq |= (((unsigned int)0xFFFFFFFF) << bitSeq_length);
+return bitSeq;
+""")
+SignExtend_method = trap.HelperMethod('SignExtend', opCode, 'execute')
+SignExtend_method.setSignature(('BIT<32>'), [('bitSeq', 'BIT<32>'), cxx_writer.writer_code.Parameter('bitSeq_length', cxx_writer.writer_code.uintType)])
+isa.addMethod(SignExtend_method)
+}}}
+This is a normal method and it can be freely called from the C++ code of the instruction as shown above.
+
+Note that _HelperMethod_ and _HelperOperation_ can be declared with many parameters and in different ways;
+refer to the _LEON3_ and _ARM7_ descriptions for more details on how to use these constructs.
 
 == Creating the Instruction Set Simulator ==
+Creating the instruction set simulator from the description is simple: define a file which directly or indirectly imports
+all the other files composing the processor decsription and that ends with the call to the `write` method
+of the _processor_ class. Then run this file in _Python_, i.e. `python myFile`. The C++ code implementing the processor
+simulator will be written in folder _processor_.
+
+For example, the main file for description of the _ARM7_ processor is _ARMArch.py_: at the beginning it includes
+the file for description of the _ISA_ with the directive `import ARMIsa`; file _ARMIsa.py_ in turn includes
+file _ARMCoding.py_ (where the instruction formats are decribed) and _ARMMethods.py_ containing helper
+functions for easing the description of the behavior of the instruction set.
+To generate the Instruction Set simulator we simply have to run command _python ARMArch.py_. Once
+the processor simulator is generated, we can procede with its compilation following the instructions
+contained in the _Setup_ page of this wiki.
