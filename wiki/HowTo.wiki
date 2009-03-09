@@ -163,20 +163,11 @@ wbStage.setEndHazard()
 processor.addPipeStage(wbStage)
 }}}
 Description of a seven stage pipeline. Some methods can be called to specify the behavior each pipeline stage:
-  * `setWriteBack`: defaults to `False`, sets the stage as a write back stage, where intermediate results
-are committed into the registers.
-This means that following operation can read from the registers destination of the ISA operation in this stage.
-  * `setCheckUnknownInstr`: defaults to `False`, instructs the stage to raise an exception in case an
-unknown instruction reaches this stage (i.e. in case in case an opcode not corresponding to  any declared
-instruction reaches this stage)
-  * `setCheckTools`: defaults to `False`, instructs the simulator to call the processor tools (debuggeer,
-profiler, OS emulator, etc.) in this stage.
-  * `setHazard`: defaults to `False`, specifies that instructions are checked for hazards when entering the stage; in case a
-hazard exists, the pipeline is stalled. (usually the decode stage is a _hazard_ stage). Usually this method
-is called for the stage were the register file is written.
-  * `setEndHazard`: defaults to `False`, specifies that registers locked in the stage marked as `setHazard`
-because the current instruction was writing them, are unlock and, as such, if a following instruction
-tries to read/write them, no hazard is generated.
+  * `setWriteBack`: defaults to `False`, sets the stage as a write back stage, where intermediate results are committed into the registers. This means that following operation can read from the registers destination of the ISA operation in this stage.
+  * `setCheckUnknownInstr`: defaults to `False`, instructs the stage to raise an exception in case an unknown instruction reaches this stage (i.e. in case in case an opcode not corresponding to  any declared instruction reaches this stage)
+  * `setCheckTools`: defaults to `False`, instructs the simulator to call the processor tools (debuggeer, profiler, OS emulator, etc.) in this stage.
+  * `setHazard`: defaults to `False`, specifies that instructions are checked for hazards when entering the stage; in case a hazard exists, the pipeline is stalled. (usually the decode stage is a _hazard_ stage). Usually this method is called for the stage were the register file is written.
+  * `setEndHazard`: defaults to `False`, specifies that registers locked in the stage marked as `setHazard` because the current instruction was writing them, are unlock and, as such, if a following instruction tries to read/write them, no hazard is generated.
 
 Finally it is possible to specify the order with which registers are written back to the main register file
 after each clock cycle:
@@ -219,8 +210,7 @@ model using the loosley timed TLM interfaces (in case we specified to used Syste
 taken into account). The valid processor variants are _funcAT_ and _accAT_: functional model using Approximate Time TLM interfaces and
 Cycle Accurate model using using Approximate Time TLM interfaces.
 The write method has two other optional parameters:
-  * `trace = True`: the processor model will be generated with tracing enabled; at each clock cycle the instruction being executed
-and the status of the processor after instruction execution will be printed.
+  * `trace = True`: the processor model will be generated with tracing enabled; at each clock cycle the instruction being executed and the status of the processor after instruction execution will be printed.
   * `dumpDecoderName = FILENAME`: the tree representing the decoder will be printed to _FILENAME_ in the _.dot_ format.
 
 == Describing the instruction coding ==
@@ -307,9 +297,7 @@ of the decoder: the higher the `frequency` parameter, the faster will be the dec
 The `setMachineCode` construct takes three parameters:
   # the first one specifies what is the machine code of this instruction
   # the second what are the bits, in the machine code, that uniquely identify this instruction
-  # the third one is used to build the disassembler: the different parts of the assembly code representing this
-instruction are the different elements of the list, elements staring with _%_ refer to the parts of the
-instruction encoding and are substituted with the value of the corresponding part in the actualy bistring.
+  # the third one is used to build the disassembler: the different parts of the assembly code representing this instruction are the different elements of the list, elements staring with _%_ refer to the parts of the instruction encoding and are substituted with the value of the corresponding part in the actualy bistring.
 It is also possible to give more complex directive to the disassembler:
 {{{
 ('b', ('%cond', {int('1000', 2) : 'a',and_imm_Instr.addTest({'rd': 0, 'rs1': 10, 'simm13': 0xfff}, {'REGS[10]' : 0xffffffff, 'PC' : 0x0, 'NPC' : 0x4}, {'REGS[10]' : 0xffffffff, 'REGS[0]' : 0, 'PC' : 0x8, 'NPC' : 0x8})
@@ -335,8 +323,7 @@ the second one the state of the processor before the execution of the instructio
 state of the processor after the execution of the instruction.
 
 One final note: the `addBehavior` construct has three additional parameters:
-  # `pre = True` specifies whether the behavior has to be added before or after the instruction code for the specified
-pipeline stage
+  # `pre = True` specifies whether the behavior has to be added before or after the instruction code for the specified pipeline stage
   # `accurateModel = True` specifies that this behavior has to be added when a cycle accurate model is being created
   # `functionalModel = True` specifies that this behavior has to be added when a functional model is being created
 
