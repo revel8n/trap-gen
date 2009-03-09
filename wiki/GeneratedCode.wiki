@@ -63,12 +63,9 @@ of the methods which are available to all the instructions, which are `flush`, `
 _HelperMethods_ declared in the ISA description files.
 Other methods which are declared in the `Instruction` class, but whose implementation is provided by
 each different instruction are:
-  # `behavior`: it contains the actual instruction behavior, as described by the C++ code of the
-instruction; the code for all the different stages and the calls to the _HelperBehaviors_ are inserted
-in this method.
+  # `behavior`: it contains the actual instruction behavior, as described by the C++ code of the instruction; the code for all the different stages and the calls to the _HelperBehaviors_ are inserted in this method.
   # `replicate`: creates a copy of this instruction and returns it.
-  # `setParams`: given a bitstring, it extract the different instruction elements as specified by the
-particular format of the instruction.
+  # `setParams`: given a bitstring, it extract the different instruction elements as specified by the particular format of the instruction.
 
 == Processor Description ==
 
@@ -84,12 +81,8 @@ The test of the decoder and of the instruction set behavior are located into fol
 tests are created only for the functional simulator and if SystemC is not used in the generated simulator.
 The tests are based on the _boost::test_ library and they composed of three units:
   # _main.cpp_: main file driving the tests; it simply instantiates the tests and runs them.
-  # _isaTests.cpp_: tests of the instruction set; it contains all the tests specified by the developer to test
-the correct behavior of each instruction of the instruction set; for more details on how to write those tests look
-at the HowTo wiki page.
-  # _decoderTests.cpp_: tests of the decoder; at processor creation we pick up random bit strings exercising each
-instruction (i.e. the variable parts of each instruction are randomly chosen, the parts that identify each instruction
-of course are not) and we verify that the decoder is able to correctly decode them.
+  # _isaTests.cpp_: tests of the instruction set; it contains all the tests specified by the developer to test the correct behavior of each instruction of the instruction set; for more details on how to write those tests look at the HowTo wiki page.
+  # _decoderTests.cpp_: tests of the decoder; at processor creation we pick up random bit strings exercising each instruction (i.e. the variable parts of each instruction are randomly chosen, the parts that identify each instruction of course are not) and we verify that the decoder is able to correctly decode them.
 
 Running the tests is simple: just run the _tests_ executable found under the `_build_/default/funcLT/tests` folder.
 
@@ -97,13 +90,7 @@ Running the tests is simple: just run the _tests_ executable found under the `_b
 
 The executable file implementing the functional simulator has the following command line parameters:
   # _help_: prints the available command line parameters together with a brief explanation on how to use them.
-  # _debugger__: enables the debugger, for the debugging of the applications running on the simulator; the debugger
-simply consists of a GDB stub. In order to use it open GDB (of course the one relative to the architecture being simulated,
-if we are simulating an arm processor, we need to open the GDB debugger for that architecture), open the application being
-simulated and connect to the GDB stub as a socket remote host using GDB command `target remote localhost:1500` (since
-the GDB Stub is waiting for connections on port 1500). Then you can normally debug the application as you would do using
-a standard GDB debugger; only note that, as normally happens when connecting to a remote target, you start execution with
-the `cont` command and not with `run`.
+  # _debugger__: enables the debugger, for the debugging of the applications running on the simulator; the debugger simply consists of a GDB stub. In order to use it open GDB (of course the one relative to the architecture being simulated, if we are simulating an arm processor, we need to open the GDB debugger for that architecture), open the application being simulated and connect to the GDB stub as a socket remote host using GDB command `target remote localhost:1500` (since the GDB Stub is waiting for connections on port 1500). Then you can normally debug the application as you would do using a standard GDB debugger; only note that, as normally happens when connecting to a remote target, you start execution with the `cont` command and not with `run`.
   # _application_: application with has to be simualted on the simulator; of course this application has to be compiled
 with a compiler for the architecture being simulated.
   # _frequency_: this option is available only if the generated processor model is based on SystemC
