@@ -300,8 +300,7 @@ The `setMachineCode` construct takes three parameters:
   # the third one is used to build the disassembler: the different parts of the assembly code representing this instruction are the different elements of the list, elements staring with _%_ refer to the parts of the instruction encoding and are substituted with the value of the corresponding part in the actualy bistring.
 It is also possible to give more complex directive to the disassembler:
 {{{
-('b', ('%cond', {int('1000', 2) : 'a',and_imm_Instr.addTest({'rd': 0, 'rs1': 10, 'simm13': 0xfff}, {'REGS[10]' : 0xffffffff, 'PC' : 0x0, 'NPC' : 0x4}, {'REGS[10]' : 0xffffffff, 'REGS[0]' : 0, 'PC' : 0x8, 'NPC' : 0x8})
-
+('b', ('%cond', {int('1000', 2) : 'a',
 int('0000', 2) : 'n', int('1001', 2) : 'ne', int('0001', 2) : 'e', int('1010', 2) : 'g', int('0010', 2) : 'le',
 int('1011', 2) : 'ge', int('0011', 2) : 'l', int('1100', 2) : 'gu', int('0100', 2) : 'leu', int('1101', 2) : 'cc',
 int('01010', 2) : 'cs', int('1110', 2) : 'pos', int('0110', 2) : 'neg', int('1111', 2) : 'vc', int('0111', 2) : 'vs',}),
