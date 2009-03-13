@@ -1,0 +1,17 @@
+#!/usr/bin/env python
+# -*- coding: iso-8859-1 -*-
+
+import os, Options
+
+def build(bld):
+    obj = bld.new_task_gen('cxx', 'objects')
+    obj.source="""
+        syscCallB.cpp
+    """
+    obj.includes = '. ../bfdFontend ../utils ..'
+    obj.uselib = 'SYSTEMC BOOST BOOST_REGEX BFD'
+    obj.export_incdirs = '.'
+    obj.name = 'syscall'
+    obj.target = 'syscall'
+    obj.install_path = None
+    bld.install_files('${PREFIX}/include', 'osEmulatorCA.hpp osEmulator.hpp syscCallB.hpp')
