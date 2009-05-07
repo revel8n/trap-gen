@@ -8,7 +8,7 @@ based project: first there is a configuration step, then the compilation and, fi
 
 == Required Libraries and Tools ==
 
-  * BFD: part of the binutils, it is used to read and parse the application software which is going to be executed on the processors.
+  * BFD: part of the binutils, it is used to read and parse the application software which is going to be executed on the processors. The development version of this package is needed
   * SystemC: downloadable from [http://www.systemc.org], it is used to manage simulated time and the communication among the hardware modules
   * TLM 2.0: downloadable from [http://www.systemc.org], it is used to manage connections among the hardware modules. This library is not necessary for the compilation of TRAP itself, but for the compilation of the generated processor models.
   * Boost: Boost libraries, downloadable from [http://www.boost.org]; These libraries are not necessary for the compilation of TRAPitself, but for the compilation of the generated processor models.
